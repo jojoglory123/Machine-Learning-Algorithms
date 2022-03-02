@@ -1,0 +1,123 @@
+import numpy as np
+from numpy.linalg import inv
+import matplotlib.pyplot as plt
+
+
+#### separate data as input and output
+data = np.loadtxt("ex1data2.txt", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1].reshape(-1, 1)
+
+##### normalize data
+miu = X.mean(axis=0).reshape(1, -1)
+sigma = X.std(axis=0).reshape(1, -1)
+for i in range(X.shape[1]):
+    X[:, i] = ( X[:, i] - miu[:, i] ) / sigma[:, i]
+
+##### insert column of ones to make designed matrix
+X = np.c_[np.ones(X.shape[0]), X]
+
+##### define loss function (least square here)
+def loss_function(X, y, theta):
+    J = (X @ theta - y).T  @ (X @ theta - y) / (2*X.shape[0])
+    return J
+
+##### parameters and initial values
+alpha = 0.01
+tol = 10**-6 #float('-inf') for -infinity, then it will be stopped by iter_max
+iter_max = 1000
+
+
+#### define gradient descent function
+def LinearRegressionGradientDescent(X, y, alpha, tol, iter_max):
+    m = X.shape[1]
+    iter = 0
+    theta = np.zeros(m).reshape(-1, 1)
+    J_history = loss_function(X, y, theta)
+    while True:
+        diff = X @ theta - y
+        J_best = J_history.min()
+
+        for i in range(m):
+            theta[i, :] = theta[i, :] - (alpha/m) * diff.T @ X[:, i]
+
+        J = loss_function(X, y, theta)
+        J_history = np.append(J_history, J)
+        iter += 1
+
+        if J_best - J < tol or iter == iter_max:
+            break
+
+    return [theta, J_history]
+
+[theta, J_history] = LinearRegressionGradientDescent(X, y, alpha, tol, iter_max)
+
+##### display coefficients
+print(theta)
+##### verify it by closed form solution
+print( inv(X.T @ X) @ X.T @ y)
+##### calculate MSE (when entire data set is train set)
+print( (X @ theta - y).T @ (X @ theta - y) / X.shape[0]  )
+##### track loss (J) in iterations
+plot1 = plt.figure(1)
+plt.plot(J_history)
+plt.xlabel("Iterations")
+plt.ylabel("Loss (J)")
+plt.title("Loss (J) in iterations")
+
+
+
+####################################
+##### k-fold cross validation ######
+####################################
+
+def GenerateLables(X, k):
+    labels = []
+    for i in range(k):
+        labels.extend([i] * (X.shape[0] // k))
+    for j in range(X.shape[0] % k):
+        labels.extend([j])
+        labels.sort()
+        labels_array = np.array(labels).reshape(-1, 1)
+    return labels_array
+
+
+def KFoldCrossValidation(X, y, k):
+    ##### combine X and y if they are separated already
+    X_y = np.c_[X, y]
+    ##### always shuffle the data before CV
+    np.random.shuffle(X_y)
+    ##### generate (vertical vector) labels
+    labels = GenerateLables(X_y, k)
+    ##### attach labels to data
+    X_y_shuffled_labeled = np.c_[labels, X_y]
+    ##### create a matrix to store MSE (row: fold1, ... foldk. column: train MSE, test MSE)
+    MSE = np.zeros((k, 2))
+    for i in range(k):
+        ##### select data with label = i as test set
+        test = X_y_shuffled_labeled[X_y_shuffled_labeled[:, 0] == i, :]
+        ##### select data with label = i as train set
+        train = X_y_shuffled_labeled[X_y_shuffled_labeled[:, 0] != i, :]
+        X_test = test[:, 1:4]
+        y_test = test[:, -1].reshape(-1, 1)
+        X_train = train[:, 1:4]
+        y_train = train[:, -1].reshape(-1, 1)
+        theta = LinearRegressionGradientDescent(X_train, y_train, alpha, tol, iter_max)[0]
+        MSE[i, 0] = ((X_train @ theta - y_train).T @ (X_train @ theta - y_train)) / (X_train.shape[0])
+        MSE[i, 1] = ((X_test @ theta - y_test).T @ (X_test @ theta - y_test)) / (X_test.shape[0])
+
+    return MSE
+
+##### display 10-fold cross validation MSE (1st col: train, 2nd col:test)
+MSE = KFoldCrossValidation(X, y, 10)
+print(MSE)
+
+##### plot MSE vs fold (two curves: train and test)
+plot2 = plt.figure(2)
+plt.plot(MSE[:, 0], "-b", label="MSE_train")
+plt.plot(MSE[:, 1], "-r", label="MSE_test")
+plt.xlabel("Fold Used as Test Set")
+plt.ylabel("MSE")
+plt.title("MSE in Folds")
+plt.legend(loc="upper right")
+plt.show()
