@@ -63,7 +63,7 @@ plot1 = plt.figure(1)
 plt.plot(J_history)
 plt.xlabel("Iterations")
 plt.ylabel("Loss (J)")
-plt.title("Loss (J) in iterations")
+plt.title("Loss (J) in Iterations")
 
 
 
