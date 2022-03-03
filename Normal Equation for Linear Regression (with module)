@@ -7,7 +7,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from sklearn import metrics
 import matplotlib.pyplot as plt
-from sklearn.model_selection import cross_val_predict
 #############################################
 ##### Use entire data set as train set ######
 #############################################
