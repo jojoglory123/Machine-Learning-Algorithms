@@ -1,0 +1,67 @@
+import numpy as np
+from numpy.linalg import inv
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import KFold
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
+from sklearn import metrics
+import matplotlib.pyplot as plt
+from sklearn.model_selection import cross_val_predict
+#############################################
+##### Use entire data set as train set ######
+#############################################
+#### separate data as input and output
+data = np.loadtxt("ex1data2.txt", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1].reshape(-1, 1)
+
+##### normalize data
+miu = X.mean(axis=0).reshape(1, -1)
+sigma = X.std(axis=0).reshape(1, -1)
+for i in range(X.shape[1]):
+    X[:, i] = ( X[:, i] - miu[:, i] ) / sigma[:, i]
+
+reg_full = LinearRegression().fit(X, y)
+
+print(reg_full.intercept_)
+print( reg_full.coef_)
+##### R square
+print(reg_full.score(X, y))
+
+
+##### verify it by closed form solution
+X_designed = np.c_[np.ones(X.shape[0]), X]
+print(inv(X_designed.T @ X_designed) @ X_designed.T @ y)
+
+#########################################################
+##### Use random 25% as test set, 75% as train set ######
+#########################################################
+# shuffle = False, random_state = None means not shuffled, the test set is always LAST 0.25 in original order
+# shuffle = False, random_state = 1 means not shuffled, so the random state doesn't work. The test set is always LAST 0.25 in original order
+# shuffle = True, random_state = None means shuffled randomly, the results vary every time
+# shuffle = True, random_state = 1 means shuffled by seed = 1, the results will consist.
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, shuffle = True, random_state = None)
+reg_part = LinearRegression().fit(X_train, y_train)
+y_pred = reg_part.predict(X_test)
+##### calculate MSE
+MSE = metrics.mean_squared_error(y_test, y_pred)
+print(MSE)
+
+#####################################
+##### 10-fold Cross Validation ######
+#####################################
+reg_cv = LinearRegression()
+##### random_state = 1, 2, 3, ... can set seed
+cv = KFold(n_splits=10, shuffle=True, random_state = None)
+##### The outupt of "scores" will be what you put in "scoring" argument.
+##### eg. scoring='neg_mean_squared_error' means MSE, another metric can be scoring='neg_mean_absolute_error', or 'r2' for r2 of test sets
+##### n_jobs is the cores for paralell computation. = -1 means all cores are used
+MSE_cv = cross_val_score(reg_cv, X, y, scoring='neg_mean_squared_error', cv=cv, n_jobs=-1)
+##### NOTE!!! the MSE generated here is always negative because of "neg_". Take the positive version.
+MSE_cv = -MSE_cv
+print(MSE_cv)
+plt.plot(MSE_cv)
+plt.xlabel("Fold Used as Test Set")
+plt.ylabel("MSE_test")
+plt.title("MSE_test in Folds")
+plt.show()
