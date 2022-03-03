@@ -16,7 +16,7 @@ data = np.loadtxt("ex1data2.txt", delimiter=',')
 X = data[:, 0:-1]
 y = data[:, -1].reshape(-1, 1)
 
-##### normalize data
+##### Standardize data
 scaler = StandardScaler().fit(X)
 ##### scaler.mean_ shows column mean
 ##### np.sqrt(scaler.var_) shows column standard deviation
@@ -31,7 +31,7 @@ print( reg_full.coef_)
 print(reg_full.score(X, y))
 
 ##### example of predicting the output of a new input X_new:
-##### normalize the X_new first by scaler:
+##### Standardize the X_new first by scaler:
 ##### X_new = scaler.transform(X_new.reshape(1, -1)) Note, X_new has to be reshaped, otherwise it won't be processed by transform
 ##### print(reg_full.predict(X_new)) Note, the argument in predict has to be reshaped too (if it was nor reshpaed before)
 
