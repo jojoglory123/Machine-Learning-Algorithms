@@ -35,11 +35,10 @@ def LinearRegressionGradientDescent(X, y, alpha, tol, iter_max):
     theta = np.zeros(m).reshape(-1, 1)
     J_history = loss_function(X, y, theta)
     while True:
-        diff = X @ theta - y
         J_best = J_history.min()
 
-        for i in range(m):
-            theta[i, :] = theta[i, :] - (alpha/m) * diff.T @ X[:, i]
+        # gradient descent iteration, see Andrew's class for details
+        theta = theta - (alpha/m) * X.T @ (X @ theta - y)
 
         J = loss_function(X, y, theta)
         J_history = np.append(J_history, J)
@@ -48,14 +47,16 @@ def LinearRegressionGradientDescent(X, y, alpha, tol, iter_max):
         if J_best - J < tol or iter == iter_max:
             break
 
-    return [theta, J_history]
+    return [theta, J_history, iter]
 
-[theta, J_history] = LinearRegressionGradientDescent(X, y, alpha, tol, iter_max)
+[theta, J_history, iter] = LinearRegressionGradientDescent(X, y, alpha, tol, iter_max)
 
 ##### display coefficients
 print(theta)
 ##### verify it by closed form solution
 print( inv(X.T @ X) @ X.T @ y)
+##### display iterations when stop
+print(iter)
 ##### calculate MSE (when entire data set is train set)
 print( (X @ theta - y).T @ (X @ theta - y) / X.shape[0]  )
 ##### track loss (J) in iterations
