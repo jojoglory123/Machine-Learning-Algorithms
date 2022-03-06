@@ -76,10 +76,11 @@ def GenerateLables(X, k):
     labels = []
     for i in range(k):
         labels.extend([i] * (X.shape[0] // k))
-    for j in range(X.shape[0] % k):
-        labels.extend([j])
-        labels.sort()
-        labels_array = np.array(labels).reshape(-1, 1)
+    if X.shape[0] // k != 0:
+        for j in range(X.shape[0] % k):
+            labels.extend([j])
+            labels.sort()
+    labels_array = np.array(labels).reshape(-1, 1)
     return labels_array
 
 
@@ -99,9 +100,9 @@ def KFoldCrossValidation(X, y, k):
         test = X_y_shuffled_labeled[X_y_shuffled_labeled[:, 0] == i, :]
         ##### select data with label = i as train set
         train = X_y_shuffled_labeled[X_y_shuffled_labeled[:, 0] != i, :]
-        X_test = test[:, 1:4]
+        X_test = test[:, 1:-1]
         y_test = test[:, -1].reshape(-1, 1)
-        X_train = train[:, 1:4]
+        X_train = train[:, 1:-1]
         y_train = train[:, -1].reshape(-1, 1)
         theta = LinearRegressionGradientDescent(X_train, y_train, alpha, tol, iter_max)[0]
         MSE[i, 0] = ((X_train @ theta - y_train).T @ (X_train @ theta - y_train)) / (X_train.shape[0])
