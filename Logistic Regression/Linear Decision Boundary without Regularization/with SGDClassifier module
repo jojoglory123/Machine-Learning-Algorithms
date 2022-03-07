@@ -1,0 +1,131 @@
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import SGDClassifier
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+import matplotlib.pyplot as plt
+from io import StringIO
+import sys
+
+#########################################################################
+##### Gradient descent for logistic regression without regularization ###
+#########################################################################
+##### separate data as input and output
+data = np.loadtxt("ex2data1.txt", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1]
+pos_idx = np.where(y==1)[0]
+neg_idx = np.where(y==0)[0]
+X_pos = X[pos_idx]
+X_neg = X[neg_idx]
+plot1 = plt.figure(1)
+plt.plot(X_pos[:, 0], X_pos[:, 1], "+k", label="y=1")
+plt.plot(X_neg[:, 0], X_neg[:, 1], "oy", label="y=0")
+plt.xlabel("Exam 1 score")
+plt.ylabel("Exam 2 score")
+plt.title("Scatter plot of training data")
+plt.legend(loc="upper right")
+
+
+##### Standardize data
+scaler = StandardScaler().fit(X)
+##### scaler.transform(X) standardize X
+X = scaler.transform(X)
+
+# verbose=1 track epochs, so we can store loss in iterations
+# only reg = SGDClassifier(loss="log", tol=10**-7, verbose=1).fit(X, y) is for result, the rest are for storing loss in iterations
+# loss="log" for logistic regression
+old_stdout = sys.stdout
+sys.stdout = mystdout = StringIO()
+
+reg = SGDClassifier(loss="log", tol=10**-7, verbose=1).fit(X, y)
+
+sys.stdout = old_stdout
+loss_history = mystdout.getvalue()
+loss_list = []
+for line in loss_history.split('\n'):
+    if(len(line.split("loss: ")) == 1):
+        continue
+    loss_list.append(float(line.split("loss: ")[-1]))
+plot2 = plt.figure(2)
+plt.plot(np.arange(len(loss_list)), loss_list)
+plt.xlabel("Epochs")
+plt.ylabel("Loss (J)")
+plt.title("Loss (J) in Epochs")
+
+print("Intercept: \n", reg.intercept_)
+print("Coefficients (excluding intercept): \n", reg.coef_)
+##### number of iterations it stops
+print("Total iterations to stop: \n", reg.n_iter_)
+##### NOTE! This is accuracy in logistic regression here! (but it is R^2 in linear regression)
+print("Accuracy in full set: \n", reg.score(X, y))
+##### Predict for a new data, say exam1 = 75, exam2 = 80
+test = np.array([[75, 80]])
+test = scaler.transform(test)
+print("Prediction for new X=(75, 80): \n", reg.predict(test))
+
+
+#########################################################################
+##### Plot decision boundary (with standardized data) ###################
+#########################################################################
+theta = np.append(reg.intercept_, reg.coef_).reshape(-1, 1)
+
+pos_idx = np.where(y==1)[0]
+neg_idx = np.where(y==0)[0]
+X_pos = X[pos_idx]
+X_neg = X[neg_idx]
+plot3 = plt.figure(3)
+
+plt.plot(X_pos[:, 0], X_pos[:, 1], "+k", label="y=1")
+plt.plot(X_neg[:, 0], X_neg[:, 1], "oy", label="y=0")
+
+def cnt(x, y, coef):
+    return coef[0, 0] + coef[1, 0]*x +coef[2, 0]*y
+
+##### set the x-axies a little bit beyond extremes (+-0.2)
+exam1 = np.arange(X[:, 0].min()-0.2,X[:, 0].max()+0.2,0.1)
+exam2 = np.arange(X[:, 1].min()-0.2,X[:, 1].max()+0.2,0.1)
+coord1, coord2 = np.meshgrid(exam1,exam2)
+plt.contour(exam1, exam2, cnt(coord1, coord2, theta), [0])
+##### plt.axis([a, b, c, d]) set x_lim to (a, b), y_lim to (c, d)
+plt.axis( [X[:, 0].min()-0.2, X[:, 0].max()+0.2, X[:, 1].min()-0.2, X[:, 1].max()+0.2] )
+plt.xlabel("Exam 1 score")
+plt.ylabel("Exam 2 score")
+plt.title("Decision boundary of standardized training data")
+plt.legend(loc="upper right")
+
+##########################################################################
+##### 10-fold Cross Validation ###########################################
+##########################################################################
+
+##### Note!!! To avoid data leakage, we can't standardize the entire dataset before separating to train/test
+##### We have to standardize the train data first, then use the mean/sd from train to scale test.
+##### So we need to use original data and Pipeline
+
+##### Obtain original data again
+data = np.loadtxt("ex2data1.txt", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1]
+
+##### Apply pipeline
+steps = list()
+steps.append(('scaler', StandardScaler()))
+steps.append(('model', SGDClassifier(loss="log", tol=10**-7)))
+pipeline = Pipeline(steps=steps)
+
+
+##### random_state = 1, 2, 3, ... can set seed
+cv = KFold(n_splits=10, shuffle=True, random_state = None)
+##### The outupt of "scores" will be what you put in "scoring" argument.
+##### eg. scoring='neg_mean_squared_error' means MSE, another metric can be scoring='neg_mean_absolute_error', or 'r2' for r2 of test sets
+##### n_jobs is the cores for paralell computation. = -1 means all cores are used
+acc = cross_val_score(pipeline, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+##### NOTE!!! the MSE generated here is always negative because of "neg_". Take the positive version.
+print("Accuracy in each folding: \n", acc)
+plot4 = plt.figure(4)
+plt.plot(acc)
+plt.xlabel("Fold Used as Test Set")
+plt.ylabel("Accuracy_test")
+plt.title("Accuracy_test in Foldings")
+plt.show()
