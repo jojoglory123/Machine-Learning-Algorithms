@@ -1,0 +1,111 @@
+import numpy as np
+from numpy.linalg import inv
+import matplotlib.pyplot as plt
+
+
+#### separate data as input and output
+data = np.loadtxt("ex1data2.txt", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1].reshape(-1, 1)
+
+##### Standardize data
+miu = X.mean(axis=0).reshape(1, -1)
+sigma = X.std(axis=0).reshape(1, -1)
+for i in range(X.shape[1]):
+    X[:, i] = ( X[:, i] - miu[:, i] ) / sigma[:, i]
+
+##### insert column of ones to make designed matrix
+X = np.c_[np.ones(X.shape[0]), X]
+
+
+#### define gradient descent function
+def LinearRegressionNormalEquation(X, y):
+    result = inv(X.T @ X) @ X.T @ y
+    return result
+
+theta = LinearRegressionNormalEquation(X, y)
+
+##### display coefficients
+print("Coefficients (including intercept): \n", theta)
+##### calculate MSE in full set
+print("MSE in full set: \n", (X @ theta - y).T @ (X @ theta - y) / X.shape[0]  )
+
+
+#########################################################################
+##### k-fold cross validation ###########################################
+#########################################################################
+
+def GenerateLables(X, k):
+    labels = []
+    for i in range(k):
+        labels.extend([i] * (X.shape[0] // k))
+    if X.shape[0] // k != 0:
+        for j in range(X.shape[0] % k):
+            labels.extend([j])
+            labels.sort()
+    labels_array = np.array(labels).reshape(-1, 1)
+    return labels_array
+
+##### Note!!! To avoid data leakage, we can't standardize the entire dataset before separating to train/test
+##### We have to standardize the train data first, then use the mean/sd from train to scale test.
+##### So we need to use original data and Pipeline
+
+##### Obtain original data again
+data = np.loadtxt("ex1data2.txt", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1].reshape(-1, 1)
+
+def KFoldCrossValidation(X, y, k):
+    ##### combine X and y if they are separated already
+    X_y = np.c_[X, y]
+    ##### always shuffle the data before CV
+    np.random.shuffle(X_y)
+    ##### generate (vertical vector) labels
+    labels = GenerateLables(X_y, k)
+    ##### attach labels to data
+    X_y_shuffled_labeled = np.c_[labels, X_y]
+    ##### create a matrix to store MSE (row: fold1, ... foldk. column: train MSE, test MSE)
+    MSE = np.zeros((k, 2))
+    for i in range(k):
+        ##### select data with label = i as test set
+        test = X_y_shuffled_labeled[X_y_shuffled_labeled[:, 0] == i, :]
+        ##### select data with label = i as train set
+        train = X_y_shuffled_labeled[X_y_shuffled_labeled[:, 0] != i, :]
+        X_test = test[:, 1:-1]
+        y_test = test[:, -1].reshape(-1, 1)
+        X_train = train[:, 1:-1]
+        y_train = train[:, -1].reshape(-1, 1)
+
+        ##### Standardize train set
+        miu_train = X_train.mean(axis=0).reshape(1, -1)
+        sigma_train = X_train.std(axis=0).reshape(1, -1)
+        for j in range(X_train.shape[1]):
+            X_train[:, j] = (X_train[:, j] - miu_train[:, j]) / sigma_train[:, j]
+        ##### make designed matrix
+        X_train = np.c_[np.ones(X_train.shape[0]), X_train]
+
+        ##### Standardize test set with miu/std from train set
+        for k in range(X_test.shape[1]):
+            X_test[:, k] = (X_test[:, k] - miu_train[:, k]) / sigma_train[:, k]
+        ##### make designed matrix
+        X_test = np.c_[np.ones(X_test.shape[0]), X_test]
+
+        theta = LinearRegressionNormalEquation(X_train, y_train)
+        MSE[i, 0] = ((X_train @ theta - y_train).T @ (X_train @ theta - y_train)) / (X_train.shape[0])
+        MSE[i, 1] = ((X_test @ theta - y_test).T @ (X_test @ theta - y_test)) / (X_test.shape[0])
+
+    return MSE
+
+##### display 10-fold cross validation MSE (1st col: train, 2nd col:test)
+MSE = KFoldCrossValidation(X, y, 10)
+print("MSE in each folding (1st_col = MSE_train, 2nd_col = MSE_test): \n", MSE)
+
+##### plot MSE vs fold (two curves: train and test)
+plot1 = plt.figure(1)
+plt.plot(MSE[:, 0], "-b", label="MSE_train")
+plt.plot(MSE[:, 1], "-r", label="MSE_test")
+plt.xlabel("Fold Used as Test Set")
+plt.ylabel("MSE")
+plt.title("MSE in Foldings")
+plt.legend(loc="upper right")
+plt.show()
