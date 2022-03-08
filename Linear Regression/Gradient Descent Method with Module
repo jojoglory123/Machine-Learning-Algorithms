@@ -102,7 +102,7 @@ cv = KFold(n_splits=10, shuffle=True, random_state = None)
 MSE_cv = cross_val_score(pipeline, X, y, scoring='neg_mean_squared_error', cv=cv, n_jobs=-1)
 ##### NOTE!!! the MSE generated here is always negative because of "neg_". Take the positive version.
 MSE_cv = -MSE_cv
-print("MSE in each folding: \n", MSE_cv)
+print("MSE_test in each folding: \n", MSE_cv)
 plot2 = plt.figure(2)
 plt.plot(MSE_cv)
 plt.xlabel("Fold Used as Test Set")
