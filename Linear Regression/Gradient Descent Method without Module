@@ -137,7 +137,7 @@ def KFoldCrossValidation(X, y, k):
 
 ##### display 10-fold cross validation MSE (1st col: train, 2nd col:test)
 MSE = KFoldCrossValidation(X, y, 10)
-print("MSE in each folding: \n", MSE)
+print("MSE in each folding (1st_col = MSE_train, 2nd_col = MSE_test): \n", MSE)
 
 ##### plot MSE vs fold (two curves: train and test)
 plot2 = plt.figure(2)
