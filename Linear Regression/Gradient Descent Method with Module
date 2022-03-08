@@ -1,0 +1,110 @@
+import numpy as np
+from numpy.linalg import inv
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import SGDRegressor
+from sklearn.model_selection import KFold
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
+from sklearn import metrics
+import matplotlib.pyplot as plt
+from io import StringIO
+import sys
+
+#############################################
+##### Use entire data set as train set ######
+#############################################
+#### separate data as input and output
+data = np.loadtxt("ex1data2.txt", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1] #Note, we can't reshape y here, it has to be an array (but not (n, 1) vector), otherwise SGDRegressor won't process it
+
+
+##### Standardize data
+scaler = StandardScaler().fit(X)
+##### scaler.mean_ shows column mean
+##### np.sqrt(scaler.var_) shows column standard deviation
+##### scaler.transform(X) standardize X
+X = scaler.transform(X)
+
+# verbose=1 track epochs, so we can store loss in iterations
+old_stdout = sys.stdout
+sys.stdout = mystdout = StringIO()
+
+reg_full = SGDRegressor(verbose=1).fit(X, y)
+
+sys.stdout = old_stdout
+loss_history = mystdout.getvalue()
+loss_list = []
+for line in loss_history.split('\n'):
+    if(len(line.split("loss: ")) == 1):
+        continue
+    loss_list.append(float(line.split("loss: ")[-1]))
+plot1 = plt.figure(1)
+plt.plot(np.arange(len(loss_list)), loss_list)
+plt.xlabel("Epochs")
+plt.ylabel("Loss (J)")
+plt.title("Loss (J) in Epochs")
+
+print("Intercept: \n", reg_full.intercept_)
+print("Coefficients (excluding intercept): \n", reg_full.coef_)
+##### number of iterations it stops
+print("Total iterations to stop: \n", reg_full.n_iter_)
+##### R square
+print("R^2 in full set: \n", reg_full.score(X, y))
+##### calculate MSE (when entire data set is train set)
+print("MSE in full set: \n", (reg_full.predict(X) - y).T @ (reg_full.predict(X) - y) / X.shape[0]  )
+
+##### verify it by closed form solution
+X_designed = np.c_[np.ones(X.shape[0]), X]
+print("Verify it by normal equation: \n",  inv(X_designed.T @ X_designed) @ X_designed.T @ y.reshape(-1, 1))
+
+#########################################################
+##### Use random 25% as test set, 75% as train set ######
+#########################################################
+# shuffle = False, random_state = None means not shuffled, the test set is always LAST 0.25 in original order
+# shuffle = False, random_state = 1 means not shuffled, so the random state doesn't work. The test set is always LAST 0.25 in original order
+# shuffle = True, random_state = None means shuffled randomly, the results vary every time
+# shuffle = True, random_state = 1 means shuffled by seed = 1, the results will consist.
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, shuffle = True, random_state = None)
+reg_part = SGDRegressor().fit(X_train, y_train)
+y_pred = reg_part.predict(X_test)
+##### calculate MSE
+MSE = metrics.mean_squared_error(y_test, y_pred)
+print("MSE of last 25% data as test set when first 75% as train set: \n",  MSE)
+
+#########################################################################
+##### k-fold cross validation ###########################################
+#########################################################################
+
+##### Note!!! To avoid data leakage, we can't standardize the entire dataset before separating to train/test
+##### We have to standardize the train data first, then use the mean/sd from train to scale test.
+##### So we need to use original data and Pipeline
+
+##### Obtain original data again
+data = np.loadtxt("ex1data2.txt", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1]
+
+##### Apply pipeline
+steps = list()
+steps.append(('scaler', StandardScaler()))
+steps.append(('model', SGDRegressor()))
+pipeline = Pipeline(steps=steps)
+
+
+##### random_state = 1, 2, 3, ... can set seed
+cv = KFold(n_splits=10, shuffle=True, random_state = None)
+##### The outupt of "scores" will be what you put in "scoring" argument.
+##### eg. scoring='neg_mean_squared_error' means MSE, another metric can be scoring='neg_mean_absolute_error', or 'r2' for r2 of test sets
+##### n_jobs is the cores for paralell computation. = -1 means all cores are used
+MSE_cv = cross_val_score(pipeline, X, y, scoring='neg_mean_squared_error', cv=cv, n_jobs=-1)
+##### NOTE!!! the MSE generated here is always negative because of "neg_". Take the positive version.
+MSE_cv = -MSE_cv
+print("MSE in each folding: \n", MSE_cv)
+plot2 = plt.figure(2)
+plt.plot(MSE_cv)
+plt.xlabel("Fold Used as Test Set")
+plt.ylabel("MSE_test")
+plt.title("MSE_test in Foldings")
+plt.show()
