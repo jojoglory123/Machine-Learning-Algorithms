@@ -1,0 +1,126 @@
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+from sklearn.svm import SVC
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+import matplotlib.pyplot as plt
+#########################################################################
+##################### SVM with linear kernel ############################
+#########################################################################
+##### separate data as input and output
+data = np.loadtxt("ex6data1.csv", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1]
+pos_idx = np.where(y==1)[0]
+neg_idx = np.where(y==0)[0]
+X_pos = X[pos_idx]
+X_neg = X[neg_idx]
+plot1 = plt.figure(1)
+plt.plot(X_pos[:, 0], X_pos[:, 1], "+k", label="y=1")
+plt.plot(X_neg[:, 0], X_neg[:, 1], "oy", label="y=0")
+plt.xlabel(r"$X_1$")
+plt.ylabel(r"$X_2$")
+plt.title("Scatter plot of training data")
+plt.legend(loc="upper right")
+
+##### Standardize data
+scaler = StandardScaler().fit(X)
+X = scaler.transform(X)
+
+#### Fit
+SVM_LinearKernel = SVC(C=1, kernel = "linear").fit(X, y)
+
+##### Note these intercept and coefficients only work when the kernel is linear
+print("Intercept: \n", SVM_LinearKernel.intercept_)
+print("Coefficients (excluding intercept): \n", SVM_LinearKernel.coef_)
+##### NOTE! This is accuracy in SVM here! (but it is R^2 in linear regression)
+print("Accuracy in full set: \n", SVM_LinearKernel.score(X, y))
+
+##### Confusion matrix and classification report
+print("Confusion Matrix: \n", confusion_matrix(y, SVM_LinearKernel.predict(X)))
+print("Classification Report: \n", classification_report(y, SVM_LinearKernel.predict(X)))
+
+##### Predict for a new data, say exam1 = 75, exam2 = 80
+test1 = np.array([[2, 4.5]])
+test1 = scaler.transform(test1)
+print("Prediction for new X=(2, 4.5): \n", SVM_LinearKernel.predict(test1))
+test2 = np.array([[1, 3]])
+test2 = scaler.transform(test2)
+print("Prediction for new X=(1, 3.0): \n", SVM_LinearKernel.predict(test2))
+
+#########################################################################
+##### Plot decision boundary (with standardized data) ###################
+#########################################################################
+theta = np.append(SVM_LinearKernel.intercept_, SVM_LinearKernel.coef_).reshape(-1, 1)
+pos_idx = np.where(y==1)[0]
+neg_idx = np.where(y==0)[0]
+X_pos = X[pos_idx]
+X_neg = X[neg_idx]
+
+plot2 = plt.figure(2)
+plt.plot(X_pos[:, 0], X_pos[:, 1], "+k", label="y=1")
+plt.plot(X_neg[:, 0], X_neg[:, 1], "oy", label="y=0")
+
+##### Plot decision boundary by linear function
+x1_marker = np.arange(X[:, 0].min()-0.2,X[:, 0].max()+0.2,0.01)
+x2 = -theta[0, 0]/theta[2, 0] - (theta[1, 0]/theta[2, 0]) * x1_marker
+plt.plot(x1_marker, x2)
+
+##### Plot deccision boundary by contour, and height was calculated from linear function
+"""def height(x1, x2, coef):
+    return coef[0, 0] + coef[1, 0]*x1 +coef[2, 0]*x2
+##### set the x-axies a little bit beyond extremes (+-0.2)
+x1_marker = np.arange(X[:, 0].min()-0.2,X[:, 0].max()+0.2,0.01)
+x2_marker = np.arange(X[:, 1].min()-0.2,X[:, 1].max()+0.2,0.01)
+coord1, coord2 = np.meshgrid(x1_marker,x2_marker)
+plt.contour(x1_marker, x2_marker, height(coord1, coord2, theta), [0])"""
+
+##### Plot deccision boundary by contour, and height was calculated from prediction
+"""x1_marker = np.arange(X[:, 0].min()-0.2,X[:, 0].max()+0.2,0.01)
+x2_marker = np.arange(X[:, 1].min()-0.2,X[:, 1].max()+0.2,0.01)
+coord1, coord2 = np.meshgrid(x1_marker,x2_marker)
+height = np.empty([coord1.shape[0], coord1.shape[1]])
+for i in range(coord1.shape[0]):
+    for j in range(coord1.shape[1]):
+        height[i, j] = SVM_LinearKernel.predict(np.c_[coord1[i, j], coord2[i, j]])
+plt.contour(x1_marker, x2_marker, height, [0])"""
+
+
+##### plt.axis([a, b, c, d]) set x_lim to (a, b), y_lim to (c, d)
+plt.axis( [X[:, 0].min()-0.2, X[:, 0].max()+0.2, X[:, 1].min()-0.2, X[:, 1].max()+0.2] )
+plt.xlabel(r"$X_1$")
+plt.ylabel(r"$X_2$")
+plt.title("Decision boundary of standardized training data, C=1")
+plt.legend(loc="upper right")
+
+##########################################################################
+##### 10-fold Cross Validation ###########################################
+##########################################################################
+
+##### Obtain original data again
+data = np.loadtxt("ex6data1.csv", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1]
+
+##### Apply pipeline
+steps = list()
+steps.append(('scaler', StandardScaler()))
+steps.append(('model', SVC(C=1, kernel = "linear")))
+pipeline = Pipeline(steps=steps)
+
+##### random_state = 1, 2, 3, ... can set seed
+cv = KFold(n_splits=10, shuffle=True, random_state = 1)
+##### scoring can be changed to "precision", "f1", ...
+acc = cross_val_score(pipeline, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+
+print("Accuracy in each folding: \n", acc)
+plot3 = plt.figure(3)
+plt.plot(acc)
+plt.xlabel("Fold Used as Test Set")
+plt.ylabel("Accuracy_test")
+plt.title("Accuracy_test in Foldings")
+
+plt.show()
