@@ -1,0 +1,40 @@
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+
+X = np.loadtxt("ex7data1.csv", delimiter=',')
+
+##### Standardize data
+scaler = StandardScaler().fit(X)
+X = scaler.transform(X)
+
+figure1 = plt.figure(1)
+plt.scatter(X[:, 0], X[:, 1])
+plt.gca().set_aspect('equal', adjustable='box')
+plt.title("Scatter Plot of Standardized Data")
+
+##### First K components PCA
+K = 1
+pca = PCA(n_components=K).fit(X)
+
+##### Find reduced coordinate
+Z = pca.transform(X)
+
+print("Variance retained after PCA: ", pca.explained_variance_ratio_.item())
+print("Eigenvector(s) of projection space: \n", pca.components_.reshape(-1, 1))
+print("Eigenvalue(s) used: ", pca.singular_values_.item())
+
+##### Recover the data with original dimensionality
+X_rec = pca.inverse_transform(Z)
+
+figure2 = plt.figure(2)
+plt.scatter(X[:, 0], X[:, 1], label = "Standardized Data")
+plt.gca().set_aspect('equal', adjustable='box')
+plt.scatter(X_rec[:, 0], X_rec[:, 1], facecolors='none', color = "red")
+x = np.linspace(np.amin(X_rec[:, 0]), np.amax(X_rec[:, 0]), 10)
+y = (pca.components_[0, 0]/pca.components_[0, 1]) * x
+plt.plot(x, y, linestyle = 'dotted', color = "red", label = "Projection Line and Projected Points")
+plt.legend(loc="upper left")
+plt.title("Scatter Plot of Standardized Data with Projection")
+plt.show()
