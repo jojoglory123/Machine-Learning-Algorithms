@@ -1,1 +1,56 @@
+import numpy as np
+from numpy.linalg import svd
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.decomposition import PCA
+import cv2
+import matplotlib.pyplot as plt
 
+img = cv2.cvtColor(cv2.imread('rose.jpg'), cv2.COLOR_BGR2RGB)
+figure1 = plt.figure(1)
+plt.imshow(img)
+plt.title("Original Image")
+
+#Splitting into channels
+X_blue, X_green, X_red = cv2.split(img)
+
+##### Scale them to 0 to 1
+X_blue, X_green, X_red = X_blue/255, X_green/255, X_red/255
+
+##### Number of components
+K = 4
+
+##### Find reduced coordinates in 3 channels
+Sigma_b = (1/X_blue.shape[0])*(X_blue.T @ X_blue)
+U_b, S_b, V_b = svd(Sigma_b)
+U_reduce_b = U_b[:, :K].reshape(-1, K)
+Z_b = X_blue @ U_reduce_b
+
+Sigma_g = (1/X_green.shape[0])*(X_green.T @ X_green)
+U_g, S_g, V_g = svd(Sigma_g)
+U_reduce_g = U_g[:, :K].reshape(-1, K)
+Z_g = X_green @ U_reduce_g
+
+Sigma_r = (1/X_red.shape[0])*(X_red.T @ X_red)
+U_r, S_r, V_r = svd(Sigma_r)
+U_reduce_r = U_r[:, :K].reshape(-1, K)
+Z_r = X_red @ U_reduce_r
+
+print("Variance retained in blue channel: ", (sum(S_b[:K])/sum(S_b)).item())
+print("Variance retained in blue channel: ", (sum(S_g[:K])/sum(S_g)).item())
+print("Variance retained in blue channel: ", (sum(S_r[:K])/sum(S_r)).item())
+
+##### Recover
+X_rec_b = Z_b @ U_reduce_b.T
+X_rec_g = Z_g @ U_reduce_g.T
+X_rec_r = Z_r @ U_reduce_r.T
+
+##### Combine 3 reduced channels to reduec img
+img_reduced_PCA_4c = cv2.merge((X_rec_b, X_rec_g, X_rec_r))
+
+##### Plot
+figure2 = plt.figure(2)
+plt.imshow(img_reduced_PCA_4c)
+plt.title('PCA 4 components')
+
+plt.show()
