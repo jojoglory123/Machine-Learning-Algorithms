@@ -1,0 +1,161 @@
+import numpy as np
+from sklearn.decomposition import PCA
+import cv2
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+
+img = cv2.cvtColor(cv2.imread('rose.jpg'), cv2.COLOR_BGR2RGB)
+figure1 = plt.figure(1)
+plt.imshow(img)
+plt.title("Original Image")
+
+#Splitting into channels
+X_blue, X_green, X_red = cv2.split(img)
+
+##### Scale them to 0 to 1
+X_blue, X_green, X_red = X_blue/255, X_green/255, X_red/255
+
+##### Number of components
+K = 4
+
+##### Find reduced coordinate
+pca_blue = PCA(n_components=K).fit(X_blue)
+Z_blue = pca_blue.transform(X_blue)
+
+pca_green = PCA(n_components=K).fit(X_green)
+Z_green = pca_blue.transform(X_green)
+
+pca_red = PCA(n_components=K).fit(X_red)
+Z_red = pca_blue.transform(X_red)
+
+print("Variance retained by blue chanel : ", pca_blue.explained_variance_ratio_)
+print("Variance retained by green chanel: ", pca_green.explained_variance_ratio_)
+print("Variance retained by red chanel  : ", pca_red.explained_variance_ratio_)
+
+figure2, axis= plt.subplots(1, 3)
+axis[0].bar(list(range(1, K+1)), pca_blue.explained_variance_ratio_)
+axis[0].set_xlabel('Eigen Values Position')
+axis[0].set_ylabel('Variance Explained')
+axis[0].set_title('Blue Channel')
+axis[1].bar(list(range(1, K+1)), pca_green.explained_variance_ratio_)
+axis[1].set_xlabel('Eigen Values Position')
+axis[1].set_ylabel('Variance Explained')
+axis[1].set_title('Green Channel')
+axis[2].bar(list(range(1, K+1)), pca_red.explained_variance_ratio_)
+axis[2].set_xlabel('Eigen Values Position')
+axis[2].set_ylabel('Variance Explained')
+axis[2].set_title('Red Channel')
+
+##### Recover the data with original dimensionality
+X_blue_rec = pca_blue.inverse_transform(Z_blue)
+X_green_rec = pca_blue.inverse_transform(Z_green)
+X_red_rec = pca_blue.inverse_transform(Z_red)
+
+##### Combine 3 reduced channels to reduec img
+img_reduced_PCA_4c = cv2.merge((X_blue_rec, X_green_rec, X_red_rec))
+
+##### You can plot compressed figure now
+"""figure5 = plt.figure(5)
+plt.imshow(img_reduced_PCA_4c)"""
+
+##### Save reduced image to file
+cv2.imwrite('rose_reduced_PCA_2c.jpg', 255*img_reduced_PCA_4c[:, :, ::-1])
+
+##########################################################
+######### Compare PCA and K-means compression ############
+##########################################################
+figure3, axis= plt.subplots(1, 3)
+
+##### Original image
+img = cv2.cvtColor(cv2.imread('rose.jpg'), cv2.COLOR_BGR2RGB)
+img = img/255
+
+axis[0].imshow(img)
+axis[0].set_title('Original Image')
+axis[0].axes.xaxis.set_visible(False)
+axis[0].axes.yaxis.set_visible(False)
+
+##### PCA 4 components
+axis[1].imshow(img_reduced_PCA_4c)
+axis[1].set_title('PCA 4 components')
+axis[1].axes.xaxis.set_visible(False)
+axis[1].axes.yaxis.set_visible(False)
+
+##### K-means 4 clusters
+X = img.reshape(img.shape[0]*img.shape[1], 3)
+K = 4
+kmeans = KMeans(n_clusters=K).fit(X)
+for i in range(X.shape[0]):
+    X[i, :] = kmeans.cluster_centers_[kmeans.labels_[i], :]
+img_reduced_Kmeans_4clusters = X.reshape(img.shape[0], img.shape[1], 3)
+
+axis[2].imshow(img_reduced_Kmeans_4clusters)
+axis[2].set_title('K-means 4 clusters')
+axis[2].axes.xaxis.set_visible(False)
+axis[2].axes.yaxis.set_visible(False)
+
+
+##########################################################
+##### Compress by different numbers of components ########
+##########################################################
+##### load image
+img = cv2.cvtColor(cv2.imread('rose.jpg'), cv2.COLOR_BGR2RGB)
+
+##### Splitting into channels
+blue,green,red = cv2.split(img)
+
+##### Scale them to 0 to 1
+df_blue, df_green, df_red = blue/255, green/255, red/255
+
+##### Fit and transform the data in PCA
+number_list = [2, 5, 20, 50, 80]
+
+##### Creat an array to store reduced images
+img_reduced_list = np.empty(shape=(len(number_list), img.shape[0], img.shape[1], img.shape[2]))
+
+##### Fit and transform the data in PCA
+for i in range(len(number_list)):
+    pca_b = PCA(n_components=number_list[i])
+    pca_b.fit(df_blue)
+    trans_pca_b = pca_b.transform(df_blue)
+    pca_g = PCA(n_components=number_list[i])
+    pca_g.fit(df_green)
+    trans_pca_g = pca_g.transform(df_green)
+    pca_r = PCA(n_components=number_list[i])
+    pca_r.fit(df_red)
+    trans_pca_r = pca_r.transform(df_red)
+    ##### Reconstruct the image and visualize
+    b_arr = pca_b.inverse_transform(trans_pca_b)
+    g_arr = pca_g.inverse_transform(trans_pca_g)
+    r_arr = pca_r.inverse_transform(trans_pca_r)
+    ##### Store resuced images
+    img_reduced_list[i, :, :, :]= cv2.merge((b_arr, g_arr, r_arr))
+
+figure4, axis = plt.subplots(2, 3)
+axis[0, 0].imshow(img)
+axis[0, 0].set_title("Original")
+axis[0, 0].axes.xaxis.set_visible(False)
+axis[0, 0].axes.yaxis.set_visible(False)
+axis[0, 1].imshow(img_reduced_list[0, :, :, :])
+axis[0, 1].set_title("2 components")
+axis[0, 1].axes.xaxis.set_visible(False)
+axis[0, 1].axes.yaxis.set_visible(False)
+axis[0, 2].imshow(img_reduced_list[1, :, :, :])
+axis[0, 2].set_title("5 components")
+axis[0, 2].axes.xaxis.set_visible(False)
+axis[0, 2].axes.yaxis.set_visible(False)
+axis[1, 0].imshow(img_reduced_list[2, :, :, :])
+axis[1, 0].set_title("20 components")
+axis[1, 0].axes.xaxis.set_visible(False)
+axis[1, 0].axes.yaxis.set_visible(False)
+axis[1, 1].imshow(img_reduced_list[3, :, :, :])
+axis[1, 1].set_title("50 components")
+axis[1, 1].axes.xaxis.set_visible(False)
+axis[1, 1].axes.yaxis.set_visible(False)
+axis[1, 2].imshow(img_reduced_list[4, :, :, :])
+axis[1, 2].set_title("80 components")
+axis[1, 2].axes.xaxis.set_visible(False)
+axis[1, 2].axes.yaxis.set_visible(False)
+
+
+plt.show()
