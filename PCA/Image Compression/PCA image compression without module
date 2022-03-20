@@ -1,8 +1,4 @@
-import numpy as np
 from numpy.linalg import svd
-import matplotlib.pyplot as plt
-import numpy as np
-from sklearn.decomposition import PCA
 import cv2
 import matplotlib.pyplot as plt
 
