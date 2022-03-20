@@ -1,0 +1,39 @@
+import numpy as np
+from numpy.linalg import svd
+import matplotlib.pyplot as plt
+
+X = np.loadtxt("ex7data1.csv", delimiter=',')
+
+##### Standardize data
+miu = X.mean(axis=0).reshape(1, -1)
+sigma = X.std(axis=0).reshape(1, -1)
+for i in range(X.shape[1]):
+    X[:, i] = ( X[:, i] - miu[:, i] ) / sigma[:, i]
+
+figure1 = plt.figure(1)
+plt.scatter(X[:, 0], X[:, 1])
+plt.title("Scatter Plot of Standardized Data")
+
+##### First K components PCA
+K = 1
+Sigma = (1/X.shape[0])*(X.T @ X)
+U, S, V = svd(Sigma)
+print("Variance retained after PCA: ", (S[:K]/sum(S)).item())
+print("Eigenvector(s) of projection space: \n", U[:, :K])
+print("Eigenvalue(s) used: ", S[:K].item())
+##### Find reduced coordinate
+U_reduce = U[:, :K].reshape(-1, K)
+Z = X @ U_reduce
+
+##### Recover the data with original dimensionality
+X_rec = Z @ U_reduce.T
+
+figure2 = plt.figure(2)
+plt.scatter(X[:, 0], X[:, 1], label = "Standardized Data")
+plt.scatter(X_rec[:, 0], X_rec[:, 1], facecolors='none', color = "red")
+lower_point = X_rec[np.where(X_rec[:, 0]==np.amin(X_rec[:, 0])), :].reshape(1, -1)
+upper_point = X_rec[np.where(X_rec[:, 0]==np.amax(X_rec[:, 0])), :].reshape(1, -1)
+plt.plot([lower_point[0, 0], upper_point[0, 0]], [lower_point[0, 1], upper_point[0, 1]], linestyle = 'dotted', color = "red", label = "Projection Line and Projected Points")
+plt.legend(loc="upper left")
+plt.title("Scatter Plot of Standardized Data with Projection")
+plt.show()
