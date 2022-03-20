@@ -21,7 +21,7 @@ pca = PCA(n_components=K).fit(X)
 ##### Find reduced coordinate
 Z = pca.transform(X)
 
-print("Variance retained after PCA: ", pca.explained_variance_ratio_.item())
+print("Variance retained after PCA: ", sum(pca.explained_variance_ratio_))
 print("Eigenvector(s) of projection space: \n", pca.components_.reshape(-1, 1))
 print("Eigenvalue(s) used: ", pca.singular_values_.item())
 
