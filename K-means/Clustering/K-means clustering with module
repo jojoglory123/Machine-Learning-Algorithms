@@ -1,0 +1,40 @@
+import numpy as np
+from sklearn.cluster import KMeans
+import random
+import matplotlib.pyplot as plt
+import matplotlib.colors as color
+
+#########################################################################
+######################## K-means Clustering #############################
+#########################################################################
+##### separate data as input and output
+X = np.loadtxt("ex7data2 _alt.csv", delimiter=',')
+plot1 = plt.figure(1)
+plt.scatter(X[:, 0], X[:, 1])
+plt.title("Scatter plot of training data")
+
+
+##### Standardize data
+"""miu = X.mean(axis=0).reshape(1, -1)
+sigma = X.std(axis=0).reshape(1, -1)
+for i in range(X.shape[1]):
+    X[:, i] = ( X[:, i] - miu[:, i] ) / sigma[:, i]"""
+K = 4
+kmeans = KMeans(n_clusters=K).fit(X)
+
+print("Epochs to converge: ", kmeans.n_iter_)
+print("Centroids: \n", kmeans.cluster_centers_)
+print("Labels: \n", kmeans.labels_)
+
+##### Predict
+test_points = np.array([[0, 0], [60, 60]])
+colors=["red", "green", "blue", "black", "cyan", "magenta", "yellow"][:K]  #only need first K colors
+predicted_labels = kmeans.predict(test_points)
+print("Predicted labels for 2 points (0, 0) and (60, 60): \n", predicted_labels)
+print("which means the predicted colors are: \n", list( colors[i] for i in predicted_labels ))
+
+plot2 = plt.figure(2)
+plt.scatter(X[:,0],X[:,1], c=kmeans.labels_, cmap=color.ListedColormap(colors))
+#plt.scatter(X[:,0],X[:,1], c=kmeans.labels_, cmap='rainbow')
+plt.title("Classified data")
+plt.show()
