@@ -1,0 +1,41 @@
+import cv2
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+
+#########################################################################
+#################### K-means Image Compression ##########################
+#########################################################################
+img = cv2.cvtColor(cv2.imread('Lenna.png'), cv2.COLOR_BGR2RGB)
+img = img/255
+figure1 = plt.figure(1)
+plt.imshow(img)
+plt.title("Original Image")
+
+##### Reshape image to 2D matrix
+X = img.reshape(img.shape[0]*img.shape[1], 3)
+
+##### 4 clusters (colors)
+K = 4
+
+kmeans = KMeans(n_clusters=K).fit(X)
+
+print("Epochs to converge: ", kmeans.n_iter_)
+print("Centroids: \n", kmeans.cluster_centers_)
+print("Labels: \n", kmeans.labels_)
+
+##### Replace X values bu corresponding centroids
+for i in range(X.shape[0]):
+    X[i, :] = kmeans.cluster_centers_[kmeans.labels_[i], :]
+
+##### Reshpae X to 3D
+img_reduced = X.reshape(img.shape[0], img.shape[1], 3)
+figure2 = plt.figure(2)
+plt.imshow(img_reduced)
+plt.title(r"Compressed Image (from $255^3$ colors to 4)")
+
+##### Save image
+##### *255 to scale back (python ignores scaling, but the png file can't)
+##### set last dimension to ::-1 to reverse the order, since we want RGB to BGR
+cv2.imwrite('Lenna_copy.png', 255*img_reduced[:, :, ::-1])
+
+plt.show()
