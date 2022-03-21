@@ -33,7 +33,7 @@ plt.scatter(X[:, 0], X[:, 1], label = "Standardized Data")
 plt.gca().set_aspect('equal', adjustable='box')
 plt.scatter(X_rec[:, 0], X_rec[:, 1], facecolors='none', color = "red")
 x = np.linspace(np.amin(X_rec[:, 0]), np.amax(X_rec[:, 0]), 10)
-y = (pca.components_[0, 0]/pca.components_[0, 1]) * x
+y = (pca.components_[0, 1]/pca.components_[0, 0]) * x
 plt.plot(x, y, linestyle = 'dotted', color = "red", label = "Projection Line and Projected Points")
 plt.legend(loc="upper left")
 plt.title("Scatter Plot of Standardized Data with Projection")
