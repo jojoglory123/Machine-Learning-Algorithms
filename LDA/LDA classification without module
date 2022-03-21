@@ -1,0 +1,297 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+#########################################################################
+####################### LDA for prediction ##############################
+#########################################################################
+##### Plot original data
+data = np.loadtxt("ex2data1.txt", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1].reshape(-1, 1)
+X0 = X[np.where(y==0)[0], :]
+X1 = X[np.where(y==1)[0], :]
+plot1 = plt.figure(1)
+plt.scatter(X0[:, 0], X0[:, 1], marker = "o", color = "black", label="y=0")
+plt.scatter(X1[:, 0], X1[:, 1], marker = "s", color = "blue", label="y=1")
+plt.gca().set_aspect('equal', adjustable='box')
+plt.xlabel("Exam 1 score")
+plt.ylabel("Exam 2 score")
+plt.title("Scatter plot of training data")
+plt.legend(loc="upper right")
+
+
+##### Since the decision boundary seems linear, we use linear fitting without polynomial of X
+##### Also, we don't use regularization, i.e., lambda = 0
+
+##### Standardize data
+miu = X.mean(axis=0).reshape(1, -1)
+sigma = X.std(axis=0).reshape(1, -1)
+X = (X-miu)/sigma
+
+##### Filter data by class
+X0 = X[np.where(y==0)[0], :]
+X1 = X[np.where(y==1)[0], :]
+
+##### Find centroid
+miu0 = X0.mean(axis=0).reshape(1, -1)
+miu1 = X1.mean(axis=0).reshape(1, -1)
+
+##### Calculate Sw and w
+X0_minus_miu0 =  X0 - miu0
+X1_minus_miu1 =  X1 - miu1
+Sw = sum(sum(X0_minus_miu0**2)) + sum(sum(X1_minus_miu1**2))
+w = (1/Sw) * (miu0 - miu1).reshape(-1, 1)
+
+
+##### Plot standardized data and projection line
+plot2 = plt.figure(2)
+plt.scatter(X0[:, 0], X0[:, 1], marker = "o", color = "black", label="y=0")
+plt.scatter(X1[:, 0], X1[:, 1], marker = "s", color = "blue", label="y=1")
+plt.gca().set_aspect('equal', adjustable='box')
+plt.xlabel("Exam 1 score")
+plt.ylabel("Exam 2 score")
+plt.title("Standardized data and projection line")
+
+##### Plot projection line
+x_axis_lower = np.amin(X[:, 0]) - 0.2
+x_axis_upper = np.amax(X[:, 0]) + 0.2
+xlinemark = np.linspace(x_axis_lower, x_axis_upper, 10)
+slope = w[1, 0] / w[0, 0]
+y = slope * xlinemark
+plt.plot(xlinemark, y, linestyle = 'dotted', color = "red", label = "Projection Line and Projected Points")
+
+##### Plot projected points
+##### Find reduced coordinate, normalize w first since it's U_red in PCA, has to be norm 1
+w = w/np.sqrt(w.T@w)
+Z0 = X0 @ w
+Z1 = X1 @ w
+
+##### Recover the data with original dimensionality
+X0_rec = Z0 @ w.T
+X1_rec = Z1 @ w.T
+plt.scatter(X0_rec[:, 0], X0_rec[:, 1], marker = "o", color = "black",facecolors='none', label="y=0")
+plt.scatter(X1_rec[:, 0], X1_rec[:, 1], marker = "s", color = "blue",facecolors='none', label="y=1")
+
+
+##### Present some statistics
+print("Eigenvector(s) of projection space (w): \n", w)
+##### Calculate variance retaiened after projection
+c0_projection_error = sum(sum((X0 - X0_rec)**2))
+c0_original_variance = sum(sum(X0 **2))
+print("Class 0 variance retained after projection: ", 1 - (c0_projection_error / c0_original_variance)   )
+c1_projection_error = sum(sum((X1 - X1_rec)**2))
+c1_original_variance = sum(sum(X1 **2))
+print("Class 1 variance retained after projection: ", 1 - (c1_projection_error / c1_original_variance)   )
+print("Total variance retained after projection: ", (c0_projection_error+c1_projection_error)/(c0_original_variance+c1_original_variance) )
+
+##### Prediction
+test1 = np.array([[50, 60]])
+test2 = np.array([[80, 90]])
+
+##### normalize it
+test1 = ((test1 - miu) / sigma).reshape(-1, 1)
+test2 = ((test2 - miu) / sigma).reshape(-1, 1)
+test1_class = int(  (w.T@test1 - w.T@miu0.T )**2 > (w.T@test1 - w.T@miu1.T )**2  )
+test2_class = int(  (w.T@test2 - w.T@miu0.T )**2 > (w.T@test2 - w.T@miu1.T )**2  )
+color = ["black", "blue"]
+
+print("For a new X=(50, 60), predicted class is = ", test1_class, "which is ", color[test1_class], "color.")
+print("For a new X=(80, 90), predicted class is = ", test2_class, "which is ", color[test2_class], "color.")
+
+
+
+plt.show()
+
+
+
+##### insert column of ones to make designed matrix
+"""X = np.c_[np.ones(X.shape[0]), X]
+
+def sigmoid(Z):
+    result = np.zeros((Z.shape[0], Z.shape[1]))
+    for i in range(Z.shape[0]):
+        for j in range(Z.shape[1]):
+            result[i, j] = 1/(1+np.exp(-Z[i, j]))
+    return result
+
+def loss_function(X, y, theta, lamb):
+    m = X.shape[0]
+    theta_no_intercept = theta[1:, 0].reshape(-1, 1)
+    J = ( y.T @ np.log(sigmoid(X@theta)) +  (1-y).T @ np.log(1- sigmoid(X@theta)) )/ (- m)  + theta_no_intercept.T @ theta_no_intercept * (lamb/(2*m))
+    grad = X.T @ (sigmoid(X@theta) - y) / m  + np.r_[np.array([[0]]), (lamb/m)*theta_no_intercept]
+
+    return [J, grad]
+
+def LogisticRegressionGradientDescent(X, y, lamb, alpha, tol, iter_max):
+    iter = 0
+    theta = np.zeros(X.shape[1]).reshape(-1, 1)
+    J_history = loss_function(X, y, theta, lamb)[0]
+    while True:
+        J_best = J_history.min()
+
+        # gradient descent iteration, see Andrew's class for details
+        grad = loss_function(X, y, theta, lamb)[1]
+        theta = theta - alpha * grad
+
+        J = loss_function(X, y, theta, lamb)[0]
+        J_history = np.append(J_history, J)
+        iter += 1
+
+        if np.absolute(J_best - J) < tol or iter == iter_max:
+            break
+
+    return [theta, J_history, iter]
+
+##### since we don't use regularization here, we set strength lambda = 0
+lamb = 0
+alpha = 0.01
+tol = 10**-3 #alpha = 0.1, tol = 10**-7 you will get Andrew's result
+iter_max = 10000
+[theta, J_history, iter] = LogisticRegressionGradientDescent(X, y, lamb, alpha, tol, iter_max)
+print("Coefficients (including intercept): \n", theta)
+print("Loss in epochs: \n", J_history)
+print("Total iterations to stop: \n", iter)
+
+##### track loss (J) in iterations
+plot2 = plt.figure(2)
+plt.plot(J_history)
+plt.xlabel("Epochs")
+plt.ylabel("Loss (J)")
+plt.title("Loss (J) in Epochs")
+
+#########################################################################
+##### Plot decision boundary (with standardized data) ###################
+#########################################################################
+pos_idx = np.where(y==1)[0]
+neg_idx = np.where(y==0)[0]
+X_pos = X[pos_idx]
+X_neg = X[neg_idx]
+plot3 = plt.figure(3)
+##### remember we've added column of 1 to X, so we plot the second/third column of X
+plt.plot(X_pos[:, 1], X_pos[:, 2], "+k", label="y=1")
+plt.plot(X_neg[:, 1], X_neg[:, 2], "oy", label="y=0")
+##### set the x-axies a little bit beyond extremes (+-0.2)
+exam1 = np.linspace(X[:, 1].min()-0.2, X[:, 1].max()+0.2, num=10)
+exam2 = -(theta[0, 0]/theta[2, 0]) - (theta[1, 0]/theta[2, 0]) * exam1
+plt.plot(exam1, exam2, label="Decision Boundary")
+##### plt.axis([a, b, c, d]) set x_lim to (a, b), y_lim to (c, d)
+plt.axis( [X[:, 1].min()-0.2, X[:, 1].max()+0.2, X[:, 2].min()-0.2, X[:, 2].max()+0.2] )
+plt.xlabel("Exam 1 score")
+plt.ylabel("Exam 2 score")
+plt.title("Decision boundary of standardized training data")
+plt.legend(loc="upper right")
+
+##### predict for values
+def predict(X, theta):
+    pred = np.zeros((X.shape[0], 1))
+    prob = sigmoid(X@theta)
+    for i in range(X.shape[0]):
+        if prob[i, 0] >= 0.5:
+            pred[i, 0] = 1
+        else:
+            pred[i, 0] = 0
+    return pred
+
+
+##### check accuracy
+def accuracy(X, y, theta):
+    pred = predict(X, theta)
+    return 1 - (pred - y).T @ (pred - y) / X.shape[0]
+
+##### calculate accuracy
+print("Accuracy in full set: \n", accuracy(X, y, theta))
+
+#########################################################################
+##### Prediction ########################################################
+#########################################################################
+##### predict for a new input X, say exam1 = 75, exam2 = 80
+test = np.array([[75, 80]])
+##### normalize it
+for i in range(test.shape[1]):
+    test[:, i] = ( test[:, i] - miu[:, i] ) / sigma[:, i]
+##### add intercept
+test = np.c_[np.ones(test.shape[0]), test]
+##### prediction
+print("Prediction for new X=(75, 80): \n", predict(test, theta))
+
+#########################################################################
+##### k-fold cross validation ###########################################
+#########################################################################
+
+def GenerateLables(X, k):
+    labels = []
+    for i in range(k):
+        labels.extend([i] * (X.shape[0] // k))
+    if X.shape[0] // k != 0:
+        for j in range(X.shape[0] % k):
+            labels.extend([j])
+            labels.sort()
+    labels_array = np.array(labels).reshape(-1, 1)
+    return labels_array
+
+##### Note!!! To avoid data leakage, we can't standardize the entire dataset before separating to train/test
+##### We have to standardize the train data first, then use the mean/sd from train to scale test.
+##### So we need to use original data and Pipeline
+
+##### Obtain original data again
+data = np.loadtxt("ex2data1.txt", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1]
+
+
+def KFoldCrossValidation(X, y, k):
+    ##### combine X and y if they are separated already
+    X_y = np.c_[X, y]
+    ##### always shuffle the data before CV
+    np.random.shuffle(X_y)
+    ##### generate (vertical vector) labels
+    labels = GenerateLables(X_y, k)
+    ##### attach labels to data
+    X_y_shuffled_labeled = np.c_[labels, X_y]
+    ##### create a matrix to store accuracy (row: fold1, ... foldk. column: train MSE, test MSE)
+    acc = np.zeros((k, 2))
+    for i in range(k):
+        ##### select data with label = i as test set
+        test = X_y_shuffled_labeled[X_y_shuffled_labeled[:, 0] == i, :]
+        ##### select data with label = i as train set
+        train = X_y_shuffled_labeled[X_y_shuffled_labeled[:, 0] != i, :]
+        X_test = test[:, 1:-1]
+        y_test = test[:, -1].reshape(-1, 1)
+        X_train = train[:, 1:-1]
+        y_train = train[:, -1].reshape(-1, 1)
+
+        ##### Standardize train set
+        miu_train = X_train.mean(axis=0).reshape(1, -1)
+        sigma_train = X_train.std(axis=0).reshape(1, -1)
+        for j in range(X_train.shape[1]):
+            X_train[:, j] = (X_train[:, j] - miu_train[:, j]) / sigma_train[:, j]
+        ##### make designed matrix
+        X_train = np.c_[np.ones(X_train.shape[0]), X_train]
+
+        ##### Standardize test set with miu/std from train set
+        for k in range(X_test.shape[1]):
+            X_test[:, k] = (X_test[:, k] - miu_train[:, k]) / sigma_train[:, k]
+        ##### make designed matrix
+        X_test = np.c_[np.ones(X_test.shape[0]), X_test]
+
+        theta = LogisticRegressionGradientDescent(X_train, y_train, lamb, alpha, tol, iter_max)[0]
+        acc[i, 0] = accuracy(X_train, y_train, theta)
+        acc[i, 1] = accuracy(X_test, y_test, theta)
+
+    return acc
+
+##### display 10-fold cross validation accuracy (1st col: train, 2nd col:test)
+##### remember here X and y are original data
+acc = KFoldCrossValidation(X, y, 10)
+print("Accuracy in each folding: \n", acc)
+##### plot accuracy vs fold (two curves: train and test)
+plot4 = plt.figure(4)
+plt.plot(acc[:, 0], "-b", label="Accuracy_train")
+plt.plot(acc[:, 1], "-r", label="Accuracy_test")
+plt.xlabel("Fold Used as Test Set")
+plt.ylabel("Accuracy")
+plt.title("Accuracy in Foldings")
+plt.legend(loc="upper right")
+
+##### plot all figures
+plt.show()"""
