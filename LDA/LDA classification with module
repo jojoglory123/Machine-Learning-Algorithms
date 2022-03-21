@@ -1,0 +1,92 @@
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+import matplotlib.pyplot as plt
+
+#########################################################################
+#################### LDA for Classification #############################
+#########################################################################
+##### Plot original data
+data = np.loadtxt("ex2data1.txt", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1]
+X0 = X[np.where(y==0)[0], :]
+X1 = X[np.where(y==1)[0], :]
+plot1 = plt.figure(1)
+plt.scatter(X0[:, 0], X0[:, 1], marker = "o", color = "black", label="y=0")
+plt.scatter(X1[:, 0], X1[:, 1], marker = "s", color = "blue", label="y=1")
+plt.xlabel("Exam 1 score")
+plt.ylabel("Exam 2 score")
+plt.title("Scatter plot of training data")
+plt.legend(loc="upper right")
+
+##### Standardize data
+scaler = StandardScaler().fit(X)
+##### scaler.transform(X) standardize X
+X = scaler.transform(X)
+##### Filter data by class
+X0 = X[np.where(y==0)[0], :]
+X1 = X[np.where(y==1)[0], :]
+##### Plot standardized data and projection line
+plot2 = plt.figure(2)
+plt.scatter(X0[:, 0], X0[:, 1], marker = "o", color = "black", label="y=0")
+plt.scatter(X1[:, 0], X1[:, 1], marker = "s", color = "blue", label="y=1")
+plt.xlabel("Exam 1 score")
+plt.ylabel("Exam 2 score")
+plt.title("Standardized data decision boundary")
+
+##### Fit K = 1
+K = 1
+lda = LDA(n_components=K, solver="eigen").fit(X, y)
+
+##### Plot projection line
+x_axis_lower = np.amin(X[:, 0]) - 0.2
+x_axis_upper = np.amax(X[:, 0]) + 0.2
+xlinemark = np.linspace(x_axis_lower, x_axis_upper, 10)
+y_value = -lda.intercept_/lda.coef_[0, 1] - (lda.coef_[0, 0]/lda.coef_[0, 1]) * xlinemark
+plt.plot(xlinemark, y_value, linestyle = 'dotted', color = "red", label = "Projection Line and Projected Points")
+
+##### Prediction
+test = np.array([[50, 90]])
+test = scaler.transform(test)
+test_pred = lda.predict(test)
+color = ["black", "blue"]
+print("For a new point X=(50, 90), the predicted class is", int(test_pred.item()), ", which is", color[int(test_pred)], "color.")
+
+##########################################################################
+##### 10-fold Cross Validation ###########################################
+##########################################################################
+
+##### Note!!! To avoid data leakage, we can't standardize the entire dataset before separating to train/test
+##### We have to standardize the train data first, then use the mean/sd from train to scale test.
+##### So we need to use original data and Pipeline
+
+##### Obtain original data again
+data = np.loadtxt("ex2data1.txt", delimiter=',')
+X = data[:, 0:-1]
+y = data[:, -1]
+
+##### Apply pipeline
+steps = list()
+steps.append(('scaler', StandardScaler()))
+steps.append(('model', LDA(n_components=K, solver="eigen")))
+pipeline = Pipeline(steps=steps)
+
+
+##### random_state = 1, 2, 3, ... can set seed
+cv = KFold(n_splits=10, shuffle=True, random_state = 1)
+##### The outupt of "scores" will be what you put in "scoring" argument.
+##### eg. scoring='neg_mean_squared_error' means MSE, another metric can be scoring='neg_mean_absolute_error', or 'r2' for r2 of test sets
+##### n_jobs is the cores for paralell computation. = -1 means all cores are used
+acc = cross_val_score(pipeline, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+##### NOTE!!! the MSE generated here is always negative because of "neg_". Take the positive version.
+print("Accuracy in each folding: \n", acc)
+plot3 = plt.figure(3)
+plt.plot(acc)
+plt.xlabel("Fold Used as Test Set")
+plt.ylabel("Accuracy_test")
+plt.title("Accuracy_test in Foldings")
+plt.show()
