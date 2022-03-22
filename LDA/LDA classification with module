@@ -37,6 +37,7 @@ plt.scatter(X1[:, 0], X1[:, 1], marker = "s", color = "blue", label="y=1")
 plt.xlabel("Exam 1 score")
 plt.ylabel("Exam 2 score")
 plt.title("Standardized data decision boundary")
+plt.legend(loc="upper right")
 
 ##### Fit K = 1
 K = 1
