@@ -40,13 +40,16 @@ plt.title("Standardized data decision boundary")
 
 ##### Fit K = 1
 K = 1
-lda = LDA(n_components=K, solver="eigen").fit(X, y)
+lda = LDA(n_components=K).fit(X, y)
 
-##### Plot projection line
+##### Plot decision boundary (projection line doesn't matter, we only need db here.)
 x_axis_lower = np.amin(X[:, 0]) - 0.2
 x_axis_upper = np.amax(X[:, 0]) + 0.2
 xlinemark = np.linspace(x_axis_lower, x_axis_upper, 10)
-y_value = -lda.intercept_/lda.coef_[0, 1] - (lda.coef_[0, 0]/lda.coef_[0, 1]) * xlinemark
+##### intercept and slope of decision boundary
+intercept_db = -lda.intercept_/lda.coef_[0, 1]
+slope_db = - (lda.coef_[0, 0]/lda.coef_[0, 1])
+y_value = intercept_db + slope_db * xlinemark
 plt.plot(xlinemark, y_value, linestyle = 'dotted', color = "red", label = "Projection Line and Projected Points")
 
 ##### Prediction
@@ -72,7 +75,7 @@ y = data[:, -1]
 ##### Apply pipeline
 steps = list()
 steps.append(('scaler', StandardScaler()))
-steps.append(('model', LDA(n_components=K, solver="eigen")))
+steps.append(('model', LDA(n_components=K)))
 pipeline = Pipeline(steps=steps)
 
 
