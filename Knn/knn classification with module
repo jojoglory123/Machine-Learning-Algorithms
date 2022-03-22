@@ -1,0 +1,65 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+from sklearn import datasets
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+
+# import some data to play with
+iris = datasets.load_iris()
+X = iris.data[:, :2]  # we only take the first two features. We could
+                      # avoid this ugly slicing by using a two-dim dataset
+y = iris.target
+
+cmap_light = ListedColormap(['#FFAAAA', '#AAFFAA', '#AAAAFF'])
+cmap_bold = ListedColormap(['#FF0000', '#00FF00', '#0000FF'])
+plot1 = plt.figure(1)
+scatter_1 = plt.scatter(X[:, 0], X[:, 1], c=y, cmap=cmap_bold)
+plt.xlabel("Weight")
+plt.ylabel("Height")
+plt.title("Scatter plot of training data")
+plt.legend(handles=scatter_1.legend_elements()[0], labels=["y=0", "y=1", "y=2"])
+
+n_neighbors = 15
+knn = KNeighborsClassifier(n_neighbors).fit(X, y)
+test = np.array([[4, 6], [8, 2]])
+pred = knn.predict(test)
+print("For 2 new data points, X1 = (%.2f, %.2f), X2=(%.2f, %.2f), the predicted class are %i and %i."
+      % (test[0, 0], test[0, 1], test[1, 0], test[1, 1], pred[0], pred[1]))
+
+# Create color maps
+cmap_light = ListedColormap(['#FFAAAA', '#AAFFAA', '#AAAAFF'])
+cmap_bold = ListedColormap(['#FF0000', '#00FF00', '#0000FF'])
+
+for weights in ['uniform', 'distance']:
+    # we create an instance of Neighbours Classifier and fit the data.
+    knn = KNeighborsClassifier(n_neighbors, weights=weights).fit(X, y)
+
+    # Plot the decision boundary. For that, we will assign a color to each
+    # point in the mesh [x_min, x_max]x[y_min, y_max].
+    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01), np.arange(y_min, y_max, 0.01))
+    height = knn.predict(np.c_[xx.ravel(), yy.ravel()])
+
+    # Put the result into a color plot
+    height = height.reshape(xx.shape)
+    plt.figure()
+    plt.pcolormesh(xx, yy, height, cmap=cmap_light)
+
+    # Plot also the training points
+    plt.scatter(X[:, 0], X[:, 1], c=y, cmap=cmap_bold)
+    plt.xlim(xx.min(), xx.max())
+    plt.ylim(yy.min(), yy.max())
+    plt.title("3-Class classification (k = %i, weights = '%s')"
+              % (n_neighbors, weights))
+
+##########################################################################
+##### 10-fold Cross Validation ###########################################
+##########################################################################
+cv = KFold(n_splits=10, shuffle=True, random_state = 1)
+acc = cross_val_score(KNeighborsClassifier(n_neighbors), X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+print("Accuracy in each folding: \n", acc)
+
+plt.show()
