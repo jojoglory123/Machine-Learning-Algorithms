@@ -85,7 +85,7 @@ print("Class 0 variance retained after projection: ", 1 - (c0_projection_error /
 c1_projection_error = sum(sum((X1 - X1_rec)**2))
 c1_original_variance = sum(sum(X1 **2))
 print("Class 1 variance retained after projection: ", 1 - (c1_projection_error / c1_original_variance)   )
-print("Total variance retained after projection: ", (c0_projection_error+c1_projection_error)/(c0_original_variance+c1_original_variance) )
+print("Total variance retained after projection: ", 1 - (c0_projection_error+c1_projection_error)/(c0_original_variance+c1_original_variance) )
 
 ##### Prediction
 def predict(X, W, Miu0, Miu1):
