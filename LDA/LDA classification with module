@@ -51,6 +51,7 @@ xlinemark = np.linspace(x_axis_lower, x_axis_upper, 10)
 intercept_db = -lda.intercept_/lda.coef_[0, 1]
 slope_db = - (lda.coef_[0, 0]/lda.coef_[0, 1])
 y_value = intercept_db + slope_db * xlinemark
+print("decision boundary is: \n y = %.2f + %.2f *x " % (intercept_db, slope_db))
 plt.plot(xlinemark, y_value, linestyle = 'dotted', color = "red", label = "Projection Line and Projected Points")
 
 ##### Prediction
