@@ -1,4 +1,5 @@
 import numpy as np
+from numpy. linalg import inv
 import matplotlib.pyplot as plt
 
 #########################################################################
@@ -39,10 +40,19 @@ miu1 = X1.mean(axis=0).reshape(1, -1)
 ##### Calculate Sw and w
 X0_minus_miu0 =  X0 - miu0
 X1_minus_miu1 =  X1 - miu1
-Sw = sum(sum(X0_minus_miu0**2)) + sum(sum(X1_minus_miu1**2))
-w = (1/Sw) * (miu0 - miu1).reshape(-1, 1)
+##### Calculate Sigma0
+Sigma0 = np.zeros([X0_minus_miu0.shape[1], X0_minus_miu0.shape[1]])
+for i in range(X0_minus_miu0.shape[0]):
+    Sigma0 = Sigma0 + (X0_minus_miu0[i, :].reshape(-1, 1) @ X0_minus_miu0[i, :].reshape(1, -1))
+##### Calculate Sigma1
+Sigma1 = np.zeros([X1_minus_miu1.shape[1], X1_minus_miu1.shape[1]])
+for i in range(X1_minus_miu1.shape[0]):
+    Sigma1 = Sigma1 + (X1_minus_miu1[i, :].reshape(-1, 1) @ X1_minus_miu1[i, :].reshape(1, -1))
+Sw = Sigma0 + Sigma1
+w = inv(Sw) @ (miu0 - miu1).reshape(-1, 1)
 ##### Normalize w first since it's U_red in PCA, has to be norm 1
 w = w/np.sqrt(w.T@w)
+
 
 ##### Plot standardized data and projection line
 plot2 = plt.figure(2)
@@ -52,7 +62,7 @@ plt.gca().set_aspect('equal', adjustable='box')
 plt.xlabel("Exam 1 score")
 plt.ylabel("Exam 2 score")
 plt.title("Standardized data and projection line")
-
+plt.legend(loc="upper right")
 
 ##### Find reduced coordinate
 Z0 = X0 @ w
