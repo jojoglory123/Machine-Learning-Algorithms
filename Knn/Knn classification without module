@@ -1,0 +1,59 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+
+X = np.array([[51, 167], [62, 182], [69, 176], [64, 173], [65, 172]
+              ,[56, 174], [58, 169], [57, 173], [55, 170]], dtype = float)
+y = np.array([1, 1, 0, 0, 0, 1, 0, 0, 1])
+
+##### filter data
+cmap_light = ListedColormap(['#FFAAAA', '#AAFFAA', '#AAAAFF'])
+cmap_bold = ListedColormap(['#FF0000', '#00FF00', '#0000FF'])
+plot1 = plt.figure(1)
+scatter_1 = plt.scatter(X[:, 0], X[:, 1], c=y, cmap=cmap_bold)
+plt.xlabel("Weight")
+plt.ylabel("Height")
+plt.title("Scatter plot of training data")
+plt.legend(handles=scatter_1.legend_elements()[0], labels=["y=0", "y=1"])
+
+
+##### Predict
+def Predict(X, y, x, K):
+    dis = np.empty([X.shape[0], x.shape[0]])
+    pred = np.empty([x.shape[0], 1])
+    for j in range(dis.shape[1]):
+        for i in range(dis.shape[0]):
+            dis[i, j] = np.sqrt( (X[i, : ].reshape(-1, 1) - x[j, : ].reshape(-1, 1)).T @ (X[i, : ].reshape(-1, 1) - x[j, : ].reshape(-1, 1)) )
+
+        K_nearst_labels = y[np.argsort(dis[:, j])[:K]]
+        if (K_nearst_labels == 0).sum() > (K_nearst_labels == 1).sum():
+            pred[j, 0] = 0
+        else:
+            pred[j, 0] = 1
+    return [pred, dis]
+
+k_neigh = 3
+test =  np.array([[52, 172], [62, 182]])
+pred, dis= Predict(X, y, test, k_neigh)
+print("For a new X=(52, 172), the predicted class is", int(pred[0, 0]))
+print("For a new X=(62, 182), the predicted class is", int(pred[1, 0]))
+
+
+x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1), np.arange(y_min, y_max, 0.1))
+height = Predict(X, y, np.c_[xx.ravel(), yy.ravel()], k_neigh)[0]
+height = height.reshape(xx.shape)
+
+plot2 = plt.figure(2)
+cmap_light = ListedColormap(['#FFAAAA', '#AAFFAA', '#AAAAFF'])
+cmap_bold = ListedColormap(['#FF0000', '#00FF00', '#0000FF'])
+plt.contour(xx, yy, height, [0])
+plt.pcolormesh(xx, yy, height, cmap=cmap_light)
+scatter_2 = plt.scatter(X[:, 0], X[:, 1], c=y, cmap=cmap_bold)
+plt.xlabel("Weight")
+plt.ylabel("Height")
+plt.title("Decision boundary")
+plt.legend(handles=scatter_2.legend_elements()[0], labels=["y=0", "y=1"], framealpha=0.5)
+
+plt.show()
