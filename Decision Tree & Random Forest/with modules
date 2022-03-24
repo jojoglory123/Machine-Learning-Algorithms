@@ -1,0 +1,67 @@
+import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn import metrics
+from sklearn.model_selection import KFold
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
+
+col_names = ['pregnant', 'glucose', 'bp', 'skin', 'insulin', 'bmi', 'pedigree', 'age', 'label']
+# load dataset
+pima = pd.read_csv("diabetes.csv", header=0, names=col_names)
+
+#split dataset in features and target variable
+feature_cols = ['pregnant', 'insulin', 'bmi', 'age','glucose','bp','pedigree']
+X = pima[feature_cols]
+y = pima.label
+
+# Split dataset into training set and test set
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
+
+#########################################################################
+########################## Decision Tree ################################
+#########################################################################
+
+# Create Decision Tree classifer object
+clf = DecisionTreeClassifier()
+
+# Train Decision Tree Classifer
+clf = clf.fit(X_train,y_train)
+
+#Predict the response for test dataset
+y_pred = clf.predict(X_test)
+
+# Model Accuracy, how often is the classifier correct?
+print("Decision tree test accuracy: \n",metrics.accuracy_score(y_test, y_pred))
+
+#########################################################################
+##### k-fold cross validation ###########################################
+#########################################################################
+cv = KFold(n_splits=10, shuffle=True, random_state = None)
+acc = cross_val_score(DecisionTreeClassifier(), X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+print("Decision tree 10 fold accuracy: \n", acc)
+print("Decision tree 10 fold mean accuracy: \n", sum(acc)/len(acc))
+
+#########################################################################
+########################## Random Forest ################################
+#########################################################################
+
+# Create Decision Tree classifer object
+clf = RandomForestClassifier(n_estimators=100, n_jobs=-1) #100 trees
+
+# Train Decision Tree Classifer
+clf = clf.fit(X_train,y_train)
+
+#Predict the response for test dataset
+y_pred = clf.predict(X_test)
+
+# Model Accuracy, how often is the classifier correct?
+print("Random forest test accuracy: \n",metrics.accuracy_score(y_test, y_pred))
+
+#########################################################################
+##### k-fold cross validation ###########################################
+#########################################################################
+cv = KFold(n_splits=10, shuffle=True, random_state = None)
+acc = cross_val_score(RandomForestClassifier(n_estimators=100, n_jobs=-1), X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+print("Random forest 10 fold accuracy: \n", acc)
+print("Random forest 10 fold mean accuracy: \n", sum(acc)/len(acc))
