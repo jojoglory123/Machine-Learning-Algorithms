@@ -1,50 +1,17 @@
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import GradientBoostingRegressor
-from xgboost import XGBClassifier
-from xgboost import XGBRegressor
 from sklearn import metrics
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from sklearn.datasets import make_classification
 from sklearn.datasets import make_regression
+# ignore warnings
+import warnings
+warnings.filterwarnings("ignore")
 
 # Simulate data
 X, y = make_classification(n_samples=1000, n_features=20, n_informative=15, n_redundant=5, random_state=7)
-
-# Split dataset into training set and test set
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
-
-#########################################################################
-##################### XGBoosting Classification #########################
-#########################################################################
-
-# Create Decision Tree classifer object
-model = XGBClassifier()
-
-# Train Decision Tree Classifer
-model = model.fit(X_train,y_train)
-
-#Predict the response for test dataset
-y_pred = model.predict(X_test)
-
-# Model Accuracy, how often is the classifier correct?
-print("XGBoosting for classification test accuracy: \n",metrics.accuracy_score(y_test, y_pred))
-
-#########################################################################
-##### k-fold cross validation ###########################################
-#########################################################################
-cv = KFold(n_splits=10, shuffle=True, random_state = None)
-acc = cross_val_score(XGBClassifier(), X, y, scoring='accuracy', cv=cv, n_jobs=-1)
-print("XGBoosting for classification 10 fold accuracy: \n", acc)
-print("XGBoosting for classification 10 fold mean accuracy: \n", sum(acc)/len(acc))
-
-#########################################################################
-####################### XGBoosting Regression ###########################
-#########################################################################
-##### separate data as input and output
-# Simulate data
-X, y = make_regression(n_samples=1000, n_features=20, n_informative=15, noise=0.1, random_state=7)
 
 # Split dataset into training set and test set
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
@@ -54,22 +21,57 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_
 #########################################################################
 
 # Create Decision Tree classifer object
-model = XGBRegressor()
+model = GradientBoostingClassifier()
 
 # Train Decision Tree Classifer
-model = model.fit(X_train, y_train)
+model = model.fit(X_train,y_train)
 
 #Predict the response for test dataset
 y_pred = model.predict(X_test)
 
 # Model Accuracy, how often is the classifier correct?
-print("XGBoosting for regression test MSE: \n",metrics.mean_squared_error(y_test, y_pred))
+print("GBM for classification test accuracy: \n",metrics.accuracy_score(y_test, y_pred))
 
 #########################################################################
 ##### k-fold cross validation ###########################################
 #########################################################################
 cv = KFold(n_splits=10, shuffle=True, random_state = None)
-MSE = cross_val_score(XGBRegressor(), X, y, scoring='neg_mean_squared_error', cv=cv, n_jobs=-1)
+acc = cross_val_score(GradientBoostingClassifier(), X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+print("GBM for classification 10 fold accuracy: \n", acc)
+print("GBM for classification 10 fold mean accuracy: \n", sum(acc)/len(acc))
+
+#########################################################################
+################# Gradien Boosting Regression ###########################
+#########################################################################
+##### separate data as input and output
+# Simulate data
+X, y = make_regression(n_samples=1000, n_features=20, n_informative=15, noise=0.1, random_state=7)
+
+
+# Split dataset into training set and test set
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
+
+#########################################################################
+################# Gradien Boosting Classification #######################
+#########################################################################
+
+# Create Decision Tree classifer object
+model = GradientBoostingRegressor()
+
+# Train Decision Tree Classifer
+model = model.fit(X_train,y_train)
+
+#Predict the response for test dataset
+y_pred = model.predict(X_test)
+
+# Model Accuracy, how often is the classifier correct?
+print("GBM for regression test MSE: \n",metrics.mean_squared_error(y_test, y_pred))
+
+#########################################################################
+##### k-fold cross validation ###########################################
+#########################################################################
+cv = KFold(n_splits=10, shuffle=True, random_state = None)
+MSE = cross_val_score(GradientBoostingRegressor(), X, y, scoring='neg_mean_squared_error', cv=cv, n_jobs=-1)
 MSE = -MSE
-print("XGBoosting for regression 10 fold MSE: \n", MSE)
-print("XGBoosting for regression 10 fold mean MSE: \n", sum(MSE)/len(MSE))
+print("GBM for regression 10 fold MSE: \n", MSE)
+print("GBM for regression 10 fold mean MSE: \n", sum(MSE)/len(MSE))
